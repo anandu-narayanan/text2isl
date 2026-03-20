@@ -118,7 +118,7 @@
                 <span id="glossCount" class="text-xs font-bold px-2 py-1 rounded bg-slate-800 text-slate-400">0 Glosses</span>
             </h2>
             
-            <div id="videoContainer" class="flex-1 rounded-2xl bg-black overflow-hidden relative shadow-inner aspect-video flex items-center justify-center border border-white/5">
+            <div id="videoContainer" class="flex-1 rounded-2xl bg-black overflow-hidden relative shadow-inner aspect-video flex items-center justify-center border border-white/5 group">
                 <p id="placeholderText" class="text-slate-500 font-medium text-center px-6">
                     Enter text and click translate to see the signs.
                 </p>
@@ -130,6 +130,24 @@
                 <div id="islMessagePlayer" class="hidden w-full h-full flex flex-col items-center justify-center p-6 text-center">
                     <svg class="w-12 h-12 text-yellow-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                     <span id="messageText" class="text-yellow-400 font-semibold text-lg"></span>
+                </div>
+                
+                <!-- Player Controls Overlay -->
+                <div id="playerControls" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity hidden border border-slate-700 shadow-xl z-10">
+                    <button id="resumeBtn" title="Play" class="text-white hover:text-blue-400 hidden transition-colors p-1"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg></button>
+                    <button id="pauseBtn" title="Pause" class="text-white hover:text-blue-400 transition-colors p-1"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg></button>
+                    <button id="stopBtn" title="Stop" class="text-white hover:text-red-400 transition-colors p-1"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path></svg></button>
+                    
+                    <div class="w-px h-5 bg-slate-600"></div>
+                    
+                    <select id="speedSelect" title="Playback Speed" class="bg-transparent text-white text-sm font-semibold outline-none cursor-pointer appearance-none pr-1">
+                        <option value="0.5" class="bg-slate-800">0.5x</option>
+                        <option value="0.75" class="bg-slate-800">0.75x</option>
+                        <option value="1" class="bg-slate-800" selected>1x</option>
+                        <option value="1.25" class="bg-slate-800">1.25x</option>
+                        <option value="1.5" class="bg-slate-800">1.5x</option>
+                        <option value="2" class="bg-slate-800">2x</option>
+                    </select>
                 </div>
             </div>
             
@@ -170,10 +188,19 @@
             const glossCount = document.getElementById('glossCount');
             const settingsBtn = document.getElementById('settingsBtn');
             const advancedSettings = document.getElementById('advancedSettings');
+            const playerControls = document.getElementById('playerControls');
+            const resumeBtn = document.getElementById('resumeBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const speedSelect = document.getElementById('speedSelect');
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
             
             let timelineAssets = [];
             let currentPlayIndex = 0;
+            let currentTimeout = null;
+            let isPaused = false;
+            let isStopped = false;
+            let playbackSpeed = 1.0;
             
             // Toggle Settings
             settingsBtn.addEventListener('click', () => {
@@ -201,8 +228,16 @@
                 videoPlayer.classList.add('hidden');
                 imagePlayer.classList.add('hidden');
                 messagePlayer.classList.add('hidden');
+                playerControls.classList.add('hidden');
                 glossDisplay.textContent = '-';
                 glossTimeline.innerHTML = '';
+                
+                // Reset State
+                isStopped = false;
+                isPaused = false;
+                clearTimeout(currentTimeout);
+                pauseBtn.classList.remove('hidden');
+                resumeBtn.classList.add('hidden');
                 
                 try {
                     const response = await fetch('/api/translate/', {
@@ -273,6 +308,7 @@
                 
                 if (timelineAssets.length > 0) {
                     currentPlayIndex = 0;
+                    playerControls.classList.remove('hidden');
                     playNextAsset();
                 } else {
                     placeholder.textContent = "No valid signs generated.";
@@ -281,10 +317,11 @@
             }
             
             function playNextAsset() {
+                if (isStopped || isPaused) return;
+
                 if (currentPlayIndex >= timelineAssets.length) {
-                    // Loop or stop. Let's Stop for now and show replay button?
-                    // Let's loop.
-                    currentPlayIndex = 0;
+                    stopPlayback();
+                    return;
                 }
                 
                 const asset = timelineAssets[currentPlayIndex];
@@ -310,6 +347,7 @@
                     messagePlayer.classList.add('hidden');
                     videoPlayer.classList.remove('hidden');
                     videoPlayer.src = asset.url;
+                    videoPlayer.playbackRate = playbackSpeed;
                     
                     videoPlayer.onended = () => {
                         currentPlayIndex++;
@@ -320,13 +358,13 @@
                     videoPlayer.onerror = () => {
                         console.error("Failed to load video:", asset.url);
                         currentPlayIndex++;
-                        setTimeout(playNextAsset, 1000);
+                        currentTimeout = setTimeout(playNextAsset, 1000 / playbackSpeed);
                     };
                     
                     videoPlayer.play().catch(e => {
                         console.error("Autoplay failed:", e);
                         currentPlayIndex++;
-                        setTimeout(playNextAsset, 1000);
+                        currentTimeout = setTimeout(playNextAsset, 1000 / playbackSpeed);
                     });
                 } else if (asset.type === 'image') {
                     videoPlayer.classList.add('hidden');
@@ -338,23 +376,82 @@
                         imagePlayer.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="%231e293b"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="200" fill="white">' + asset.gloss.slice(-2, -1).toUpperCase() + '</text></svg>';
                     }
                     
-                    // Images stay for 1 second
-                    setTimeout(() => {
-                        currentPlayIndex++;
-                        playNextAsset();
-                    }, 1000);
+                    // Images stay for duration scaled by speed
+                    currentTimeout = setTimeout(() => {
+                        if (!isPaused && !isStopped) {
+                            currentPlayIndex++;
+                            playNextAsset();
+                        }
+                    }, 1000 / playbackSpeed);
                 } else if (asset.type === 'message') {
                     videoPlayer.classList.add('hidden');
                     imagePlayer.classList.add('hidden');
                     messagePlayer.classList.remove('hidden');
                     messageText.textContent = asset.message;
                     
-                    setTimeout(() => {
-                        currentPlayIndex++;
-                        playNextAsset();
-                    }, 2000);
+                    currentTimeout = setTimeout(() => {
+                        if (!isPaused && !isStopped) {
+                            currentPlayIndex++;
+                            playNextAsset();
+                        }
+                    }, 2000 / playbackSpeed);
                 }
             }
+
+            // Player Control Handlers
+            pauseBtn.addEventListener('click', () => {
+                isPaused = true;
+                pauseBtn.classList.add('hidden');
+                resumeBtn.classList.remove('hidden');
+                
+                if (timelineAssets[currentPlayIndex] && timelineAssets[currentPlayIndex].type === 'video') {
+                    videoPlayer.pause();
+                } else {
+                    clearTimeout(currentTimeout);
+                }
+            });
+
+            resumeBtn.addEventListener('click', () => {
+                isPaused = false;
+                resumeBtn.classList.add('hidden');
+                pauseBtn.classList.remove('hidden');
+
+                if (currentPlayIndex >= timelineAssets.length) {
+                    currentPlayIndex = 0;
+                }
+                
+                if (timelineAssets[currentPlayIndex] && timelineAssets[currentPlayIndex].type === 'video') {
+                    videoPlayer.play().catch(e => console.error(e));
+                } else {
+                    playNextAsset();
+                }
+            });
+
+            function stopPlayback() {
+                isStopped = true;
+                isPaused = false;
+                clearTimeout(currentTimeout);
+                currentPlayIndex = 0;
+                
+                videoPlayer.pause();
+                videoPlayer.currentTime = 0;
+                
+                resumeBtn.classList.remove('hidden');
+                pauseBtn.classList.add('hidden');
+                
+                document.querySelectorAll('#glossTimeline div').forEach(b => {
+                    b.classList.remove('opacity-100', 'bg-blue-600', 'text-white', 'border-blue-500');
+                    b.classList.add('opacity-60', 'bg-slate-800', 'text-slate-300');
+                });
+                glossDisplay.textContent = '-';
+            }
+            
+            stopBtn.addEventListener('click', stopPlayback);
+
+            speedSelect.addEventListener('change', (e) => {
+                playbackSpeed = parseFloat(e.target.value);
+                videoPlayer.playbackRate = playbackSpeed;
+            });
             
             // Web Speech API Integration
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
