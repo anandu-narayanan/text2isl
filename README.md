@@ -63,7 +63,7 @@ Displays sequential gesture videos for each word.
 ---
 
 ### ISL Dictionary
-Live communication using ISL gestures.
+ISL Dictionary currently have 253 words.
 
 ![Chat](assets/dictionary.png)
 
