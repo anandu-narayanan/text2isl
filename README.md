@@ -44,6 +44,29 @@ text-to-isl/
 │── requirements.txt
 ```
 
+
+
+## 📸 Screenshots
+
+### Home UI
+Clean and simple UI for entering text or speech input.
+
+![Home](assets/home.png)
+
+---
+
+### ISL Translation 
+Displays sequential gesture videos for each word.
+
+![Translation](assets/translation.png)
+
+---
+
+### ISL Dictionary
+Live communication using ISL gestures.
+
+![Chat](assets/dictionary.png)
+
 ---
 
 ## Setup Instructions
