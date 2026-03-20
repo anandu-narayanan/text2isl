@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ISL Dictionary</title>
+    <title>Text2ISL Dictionary</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -13,8 +13,8 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col p-6">
-    <nav class="w-full max-w-6xl mx-auto flex items-center justify-between mb-8 glass-panel py-4 px-8 rounded-2xl">
-        <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">ISL Edu</h1>
+    <nav class="w-full max-w-6xl mx-auto flex items-center justify-between mb-8 glass-panel py-4 px-8 rounded-2xl hover:shadow-xl hover:shadow-blue-900/10 transition-all duration-300">
+        <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400 tracking-tight">Text2ISL</h1>
         <div class="flex gap-4">
             <a href="{% url 'index' %}" class="text-slate-300 hover:text-white transition-colors py-2 px-4 rounded-lg hover:bg-slate-800">Translator</a>
             <a href="{% url 'dictionary' %}" class="text-blue-400 font-semibold py-2 px-4 rounded-lg bg-blue-500/10">Dictionary</a>
